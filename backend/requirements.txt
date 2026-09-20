@@ -1,0 +1,31 @@
+# Core API
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+
+# Data layer
+sqlalchemy==2.0.36
+pydantic==2.10.4
+pydantic-settings==2.7.0
+
+# Auth & security
+pyjwt==2.10.1
+passlib[bcrypt]==1.7.4
+bcrypt==4.2.1
+cryptography==44.0.0
+
+# Integration gateway (live mode) + fuzzy matching + anomaly detection
+httpx==0.28.1
+rapidfuzz==3.10.1
+scikit-learn==1.6.0
+numpy==2.2.1
+
+# Tests
+pytest==8.3.4
+pytest-cov==6.0.0
+
+# Postgres (Docker / production). SQLite (stdlib) is used for local dev by default.
+psycopg2-binary==2.9.10
+
+# Optional: enable for real push notifications (see README "Production checklist")
+# firebase-admin==6.6.0

@@ -1,0 +1,16 @@
+# Keep local secrets, dev databases and caches out of the image build context.
+.env
+*.env
+!.env.example
+*.db
+*.sqlite3
+uploads/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+tests/

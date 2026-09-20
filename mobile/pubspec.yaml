@@ -1,0 +1,39 @@
+name: janjatisetu
+description: "JanjatiSetu — unified scholarship platform for ST/PVTG students (SIH26238)."
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+  flutter: ">=3.19.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # networking
+  http: ^1.2.2
+
+  # local persistence: auth token + offline outbox
+  shared_preferences: ^2.3.3
+
+  # app-wide state (session, dashboard, offline queue)
+  provider: ^6.1.2
+
+  # date formatting (bilingual, en/hi)
+  intl: ^0.19.0
+
+  # file picking for document upload (camera/gallery/files)
+  file_picker: ^8.1.4
+
+  # connectivity check, to know when to flush the offline queue
+  connectivity_plus: ^6.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true

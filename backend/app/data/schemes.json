@@ -1,0 +1,77 @@
+[
+  {
+    "code": "PRE_MATRIC",
+    "name": "Pre-Matric Scholarship for ST Students",
+    "short_name": "Pre-Matric",
+    "portal": "NSP/OTR",
+    "description": "Financial assistance for ST students studying in Classes 9 and 10, to reduce the dropout rate at the secondary stage.",
+    "documents": ["CASTE_CERT", "INCOME_CERT", "MARKSHEET", "BANK_PASSBOOK"],
+    "conflicts_with": [],
+    "rules": [
+      {"id": "category", "label": "Belongs to the Scheduled Tribe category", "field": "category", "op": "eq", "value": "ST"},
+      {"id": "class", "label": "Studying in Class 9 or Class 10", "field": "course_level", "op": "in", "value": ["CLASS_9", "CLASS_10"]},
+      {"id": "income", "label": "Annual family income up to \u20b92,50,000", "field": "annual_family_income", "op": "lte", "value": 250000}
+    ]
+  },
+  {
+    "code": "POST_MATRIC",
+    "name": "Post-Matric Scholarship for ST Students",
+    "short_name": "Post-Matric",
+    "portal": "NSP/OTR",
+    "description": "Financial assistance for ST students studying in Class 11 and above, including diploma, undergraduate and postgraduate courses.",
+    "documents": ["CASTE_CERT", "INCOME_CERT", "MARKSHEET", "BANK_PASSBOOK", "ADMISSION_LETTER"],
+    "conflicts_with": ["TOP_CLASS"],
+    "rules": [
+      {"id": "category", "label": "Belongs to the Scheduled Tribe category", "field": "category", "op": "eq", "value": "ST"},
+      {"id": "class", "label": "Studying in Class 11 or above", "field": "course_level", "op": "in",
+       "value": ["CLASS_11", "CLASS_12", "DIPLOMA", "UG", "PG", "MPHIL", "PHD"]},
+      {"id": "income", "label": "Annual family income up to \u20b92,50,000", "field": "annual_family_income", "op": "lte", "value": 250000}
+    ]
+  },
+  {
+    "code": "TOP_CLASS",
+    "name": "Top Class Education Scheme for ST Students",
+    "short_name": "Top Class",
+    "portal": "SFMP",
+    "description": "Full financial support for ST students admitted to India's listed premier institutions for undergraduate and postgraduate study.",
+    "documents": ["CASTE_CERT", "INCOME_CERT", "ADMISSION_LETTER", "BANK_PASSBOOK"],
+    "conflicts_with": ["POST_MATRIC"],
+    "rules": [
+      {"id": "category", "label": "Belongs to the Scheduled Tribe category", "field": "category", "op": "eq", "value": "ST"},
+      {"id": "level", "label": "Undergraduate, postgraduate or diploma course", "field": "course_level", "op": "in",
+       "value": ["DIPLOMA", "UG", "PG"]},
+      {"id": "income", "label": "Annual family income up to \u20b98,00,000", "field": "annual_family_income", "op": "lte", "value": 800000}
+    ]
+  },
+  {
+    "code": "NFST",
+    "name": "National Fellowship and Scholarship for Higher Education of ST Students",
+    "short_name": "NFST",
+    "portal": "NSP/OTR",
+    "description": "Fellowship for ST students pursuing M.Phil. and Ph.D. courses, covering monthly assistance and contingency grants.",
+    "documents": ["CASTE_CERT", "NET_JRF_CERT"],
+    "conflicts_with": [],
+    "rules": [
+      {"id": "category", "label": "Belongs to the Scheduled Tribe category", "field": "category", "op": "eq", "value": "ST"},
+      {"id": "level", "label": "Enrolled in M.Phil. or Ph.D.", "field": "course_level", "op": "in", "value": ["MPHIL", "PHD"]},
+      {"id": "nta", "label": "Qualified UGC-NET / JRF for Ph.D. admission", "field": "ugc_nta_qualified", "op": "truthy", "value": true}
+    ]
+  },
+  {
+    "code": "NOS",
+    "name": "National Overseas Scholarship",
+    "short_name": "NOS",
+    "portal": "NOS",
+    "description": "Financial assistance for ST students to pursue master's and Ph.D. level courses at approved institutions abroad.",
+    "documents": ["CASTE_CERT", "INCOME_CERT", "ADMISSION_LETTER", "MARKSHEET"],
+    "conflicts_with": [],
+    "rules": [
+      {"id": "category", "label": "Belongs to the Scheduled Tribe category", "field": "category", "op": "eq", "value": "ST"},
+      {"id": "level", "label": "Master's or Ph.D. level course", "field": "course_level", "op": "in", "value": ["PG", "PHD"]},
+      {"id": "income", "label": "Annual family income up to \u20b98,00,000", "field": "annual_family_income", "op": "lte", "value": 800000},
+      {"id": "foreign_admission", "label": "Holds an admission offer from an approved foreign institution", "field": "foreign_admission", "op": "truthy", "value": true},
+      {"id": "marks", "label": "At least 60% in the qualifying examination", "field": "last_exam_percentage", "op": "gte", "value": 60},
+      {"id": "age", "label": "Age not more than 35 years", "field": "age", "op": "lte", "value": 35}
+    ]
+  }
+]

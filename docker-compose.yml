@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: janjatisetu
+      POSTGRES_USER: janjatisetu
+      POSTGRES_PASSWORD: janjatisetu
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U janjatisetu"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5432:5432"
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg2://janjatisetu:janjatisetu@db:5432/janjatisetu
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      FIELD_ENCRYPTION_KEY: ${FIELD_ENCRYPTION_KEY:-}
+      SEED_DEMO: ${SEED_DEMO:-true}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      INTEGRATION_MODE: ${INTEGRATION_MODE:-mock}
+    volumes:
+      - uploads:/app/uploads
+    ports:
+      - "8000:8000"
+
+volumes:
+  db_data:
+  uploads:
