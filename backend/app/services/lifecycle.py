@@ -41,7 +41,7 @@ _TERMINAL_DONE = {"DBT_PAID"}
 # The formal state machine: current status -> allowed next statuses.
 ALLOWED: dict[str, set[str]] = {
     "DRAFT": {"SUBMITTED"},
-    "SUBMITTED": {"UNDER_VERIFICATION", "REJECTED"},
+    "SUBMITTED": {"UNDER_VERIFICATION", "VERIFIED", "REJECTED", "SANCTIONED"},
     "UNDER_VERIFICATION": {"DEFICIENCY", "VERIFIED", "REJECTED"},
     "DEFICIENCY": {"UNDER_VERIFICATION"},
     "VERIFIED": {"SANCTIONED", "REJECTED"},

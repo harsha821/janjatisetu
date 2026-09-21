@@ -17,10 +17,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   final _formKey = GlobalKey<FormState>();
   final _phone = TextEditingController();
   final _password = TextEditingController();
-  final _fullName = TextEditingController();
-  final _email = TextEditingController();
-
-  bool _registering = false;
   bool _busy = false;
   bool _obscure = true;
   String? _error;
@@ -29,8 +25,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   void dispose() {
     _phone.dispose();
     _password.dispose();
-    _fullName.dispose();
-    _email.dispose();
     super.dispose();
   }
 
@@ -42,20 +36,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     });
     final session = context.read<Session>();
     try {
-      if (_registering) {
-        await session.register(
-          phone: _phone.text.trim(),
-          password: _password.text,
-          fullName: _fullName.text.trim(),
-          email: _email.text.trim().isEmpty ? null : _email.text.trim(),
-        );
-      } else {
-        await session.login(_phone.text.trim(), _password.text);
-      }
+      await session.login(_phone.text.trim(), _password.text);
     } on ApiException catch (e) {
       setState(() => _error = e.message);
     } catch (e) {
-      setState(() => _error = 'Could not reach the server. Check your connection and try again.');
+      setState(() => _error = 'Error: $e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -64,7 +49,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   void _fillDemo(String phone, String password) {
     _phone.text = phone;
     _password.text = password;
-    setState(() => _registering = false);
+    setState(() {});
   }
 
   @override
@@ -89,14 +74,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     const Text('Every student counts', textAlign: TextAlign.center,
                         style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic)),
                     const SizedBox(height: 32),
-                    if (_registering) ...[
-                      TextFormField(
-                        controller: _fullName,
-                        decoration: const InputDecoration(labelText: 'Full name'),
-                        validator: (v) => (v == null || v.trim().length < 2) ? 'Enter your full name' : null,
-                      ),
-                      const SizedBox(height: 12),
-                    ],
                     TextFormField(
                       controller: _phone,
                       keyboardType: TextInputType.phone,
@@ -104,14 +81,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       validator: (v) => (v == null || v.trim().length < 10) ? 'Enter a valid phone number' : null,
                     ),
                     const SizedBox(height: 12),
-                    if (_registering) ...[
-                      TextFormField(
-                        controller: _email,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: const InputDecoration(labelText: 'Email (optional)', prefixIcon: Icon(Icons.mail_outline)),
-                      ),
-                      const SizedBox(height: 12),
-                    ],
                     TextFormField(
                       controller: _password,
                       obscureText: _obscure,
@@ -135,12 +104,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       child: _busy
                           ? const SizedBox(height: 18, width: 18,
                               child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : Text(_registering ? 'Create account' : 'Log in'),
-                    ),
-                    const SizedBox(height: 12),
-                    TextButton(
-                      onPressed: _busy ? null : () => setState(() => _registering = !_registering),
-                      child: Text(_registering ? 'Already have an account? Log in' : "New here? Create an account"),
+                          : const Text('Log in'),
                     ),
                     OutlinedButton.icon(
                       onPressed: () => Navigator.of(context).push(
@@ -154,7 +118,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       ),
                     ),
                     const SizedBox(height: 24),
-                    if (!_registering) _DemoAccounts(onPick: _fillDemo),
+                    _DemoAccounts(onPick: _fillDemo),
                   ],
                 ),
               ),

@@ -164,7 +164,7 @@ class _AdminApplicationDetailScreenState extends State<AdminApplicationDetailScr
             TextField(controller: noteCtrl, decoration: const InputDecoration(labelText: 'What must the student fix?'), maxLines: 3),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
-              value: docType,
+              initialValue: docType,
               decoration: const InputDecoration(labelText: 'Related document (optional)'),
               items: const ['CASTE_CERT', 'INCOME_CERT', 'MARKSHEET', 'BANK_PASSBOOK', 'ADMISSION_LETTER', 'NET_JRF_CERT']
                   .map((d) => DropdownMenuItem(value: d, child: Text(d)))
@@ -221,7 +221,7 @@ class _AdminApplicationDetailScreenState extends State<AdminApplicationDetailScr
             const Text('Open review cases', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
             ...openCases.map((c) => Card(
-                  color: AppColors.danger.withOpacity(0.06),
+                  color: AppColors.danger.withValues(alpha: 0.06),
                   child: ListTile(
                     leading: SeverityChip(severity: c['severity'] as String),
                     title: Text('${c['title']}'),

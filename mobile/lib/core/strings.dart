@@ -80,6 +80,7 @@ class Strings {
       );
   String get startApplication => _t(en: 'Start application', hi: 'आवेदन शुरू करें', te: 'దరఖాస్తు ప్రారంభించండి', ta: 'விண்ணப்பிக்கவும்', bn: 'আবেদন শুরু করুন', kn: 'ಅರ್ಜಿ ಸಲ್ಲಿಸಿ');
   String get continueApplication => _t(en: 'Continue', hi: 'जारी रखें', te: 'కొనసాగించండి', ta: 'தொடரவும்', bn: 'চালিয়ে যান', kn: 'ಮುಂದುವರಿಸಿ');
+  String get alreadyApplied => _t(en: 'Already applied', hi: 'पहले से आवेदन किया', te: 'ఇప్పటికే దరఖాస్తు చేయబడింది', ta: 'ஏற்கனவே விண்ணப்பிக்கப்பட்டது', bn: 'ইতিমধ্যে আবেদন করা হয়েছে', kn: 'ಈಗಾಗಲೇ ಅರ್ಜಿ ಸಲ್ಲಿಸಲಾಗಿದೆ');
   String get submit => _t(en: 'Submit', hi: 'जमा करें', te: 'సమర్పించండి', ta: 'சமர்ப்பிக்கவும்', bn: 'জমা দিন', kn: 'ಸಲ್ಲಿಸಿ');
   String get save => _t(en: 'Save', hi: 'सहेजें', te: 'భద్రపరచండి', ta: 'சேமிக்கவும்', bn: 'সংরক্ষণ করুন', kn: 'ಉಳಿಸಿ');
   String get retry => _t(en: 'Retry', hi: 'फिर कोशिश करें', te: 'మళ్లీ ప్రయత్నించండి', ta: 'மீண்டும் முயற்சிக்கவும்', bn: 'আবার চেষ্টা করুন', kn: 'ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ');

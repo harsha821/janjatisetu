@@ -137,6 +137,18 @@ class _OtrRegistrationScreenState extends State<OtrRegistrationScreen> {
       _regenerateCaptcha();
       return;
     }
+    if (_passwordController.text.length < 8) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password must be at least 8 characters')),
+      );
+      return;
+    }
+    if (_passwordController.text != _confirmPasswordController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Passwords do not match')),
+      );
+      return;
+    }
     setState(() {
       _currentStep = 3;
     });
@@ -259,9 +271,9 @@ class _OtrRegistrationScreenState extends State<OtrRegistrationScreen> {
                 child: const Icon(Icons.account_balance_rounded, color: AppColors.primary, size: 28),
               ),
               const SizedBox(width: 12),
-              Column(
+              const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text(
                     'National Scholarship Portal',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1E293B)),
@@ -391,11 +403,11 @@ class _OtrRegistrationScreenState extends State<OtrRegistrationScreen> {
         _guidelinePoint('2. Essential Requirement for OTR:', 'Active mobile number is mandatory for OTR.'),
         _guidelinePoint('3. No payment of fee:', 'No payment of fee is required for OTR.'),
         _guidelinePoint('4. Steps for Registration:', ''),
-        Padding(
-          padding: const EdgeInsets.only(left: 20, bottom: 8),
+        const Padding(
+          padding: EdgeInsets.only(left: 20, bottom: 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
+            children: [
               Text('I. Once allotted an OTR, student can apply for scholarship later when the portal is open for application submission.', style: TextStyle(fontSize: 13, color: Color(0xFF475569))),
               SizedBox(height: 4),
               Text('II. Upon successful registration, a reference number will be sent on the registered mobile number.', style: TextStyle(fontSize: 13, color: Color(0xFF475569))),
@@ -596,6 +608,42 @@ class _OtrRegistrationScreenState extends State<OtrRegistrationScreen> {
                           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                         ),
                       ),
+                      const SizedBox(height: 20),
+                      const Divider(),
+                      const SizedBox(height: 12),
+                      const Text('Set Account Password', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                      const SizedBox(height: 12),
+                      const Text('Password *', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: _passwordController,
+                        obscureText: _obscurePassword,
+                        decoration: InputDecoration(
+                          hintText: 'Create password (min 8 characters)',
+                          border: const OutlineInputBorder(),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          suffixIcon: IconButton(
+                            icon: Icon(_obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text('Confirm Password *', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: _confirmPasswordController,
+                        obscureText: _obscureConfirmPassword,
+                        decoration: InputDecoration(
+                          hintText: 'Re-enter your password',
+                          border: const OutlineInputBorder(),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          suffixIcon: IconButton(
+                            icon: Icon(_obscureConfirmPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                            onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -611,9 +659,9 @@ class _OtrRegistrationScreenState extends State<OtrRegistrationScreen> {
                       border: Border.all(color: const Color(0xFFE2E8F0)),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Column(
+                    child: const Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         Text('Note:-', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                         SizedBox(height: 8),
                         Text('1. Student/Parent/Legal guardian must read the instructions carefully before registration.', style: TextStyle(fontSize: 12, color: Color(0xFF475569))),
@@ -754,9 +802,9 @@ class _OtrRegistrationScreenState extends State<OtrRegistrationScreen> {
                       border: Border.all(color: const Color(0xFFE2E8F0)),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Column(
+                    child: const Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         Text('Note:-', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                         SizedBox(height: 8),
                         Text('1. Parent/Legal Guardian/Student must read the instructions carefully before registration.', style: TextStyle(fontSize: 12, color: Color(0xFF475569))),
@@ -881,7 +929,7 @@ class _OtrRegistrationScreenState extends State<OtrRegistrationScreen> {
           children: [
             Expanded(
               child: DropdownButtonFormField<String>(
-                value: _gender,
+                initialValue: _gender,
                 decoration: const InputDecoration(labelText: 'Gender', border: OutlineInputBorder()),
                 items: ['Female', 'Male', 'Other'].map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
                 onChanged: (v) => setState(() => _gender = v!),
@@ -890,7 +938,7 @@ class _OtrRegistrationScreenState extends State<OtrRegistrationScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: DropdownButtonFormField<String>(
-                value: _category,
+                initialValue: _category,
                 decoration: const InputDecoration(labelText: 'Social Category', border: OutlineInputBorder()),
                 items: ['ST', 'PVTG'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                 onChanged: (v) => setState(() => _category = v!),

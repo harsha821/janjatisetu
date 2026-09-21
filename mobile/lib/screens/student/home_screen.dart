@@ -608,6 +608,10 @@ class _ApplicationCard extends StatelessWidget {
                     ),
                   ),
                   StatusChip(label: s.statusLabel(app['status'] as String), status: app['status'] as String),
+                  if (app['auto_verified'] == true) ...[
+                    const SizedBox(width: 6),
+                    const Icon(Icons.verified, color: AppColors.success, size: 16),
+                  ]
                 ],
               ),
               if (openDef.isNotEmpty) ...[

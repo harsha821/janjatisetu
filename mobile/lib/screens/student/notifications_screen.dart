@@ -64,7 +64,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   final n = items[i] as Map<String, dynamic>;
                   final unread = n['is_read'] == false;
                   return ListTile(
-                    tileColor: unread ? AppColors.primary.withOpacity(0.05) : null,
+                    tileColor: unread ? AppColors.primary.withValues(alpha: 0.05) : null,
                     leading: Icon(_iconFor(n['kind'] as String), color: unread ? AppColors.primary : Colors.grey),
                     title: Text('${n['title']}', style: TextStyle(fontWeight: unread ? FontWeight.bold : FontWeight.normal)),
                     subtitle: Text('${n['body']}'),

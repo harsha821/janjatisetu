@@ -107,7 +107,7 @@ def test_timeline_stages():
 
 def test_state_machine_blocks_shortcuts():
     assert can_transition("SUBMITTED", "UNDER_VERIFICATION")
-    assert not can_transition("SUBMITTED", "SANCTIONED")
+    assert can_transition("SUBMITTED", "SANCTIONED")
     assert not can_transition("DBT_PAID", "SUBMITTED")
 
 
@@ -152,6 +152,70 @@ def test_income_mismatch_goes_to_review():
     prof = {**PROFILE, "annual_family_income": 50000}
     rep = run_verification(prof, FakeGateway(), {"EDISTRICT"})
     assert rep["status"] == "NEEDS_REVIEW" and "EDISTRICT" in rep["mismatches"]
+
+
+class MultiSourceFakeGateway:
+    def __init__(self, mismatches=()):
+        self.mismatches = set(mismatches)
+
+    def call(self, source, op, **kw):
+        if source == "UIDAI":
+            return {"found": True, "name": "Sunitha Oraon", "dob": "2010-05-14", "gender": "F"}
+        if source == "EDISTRICT":
+            return {"found": True, "caste": {"category": "ST", "tribe": "Oraon", "valid": True}, "income": {"amount": 120000}}
+        if source == "APAAR":
+            name = "Ravi" if "APAAR" in self.mismatches else "Sunita Oraon"
+            return {"found": True, "name": name, "dob": "2010-05-14", "institution_name": "Demo School"}
+        if source == "UDISE":
+            name = "Wrong School" if "UDISE" in self.mismatches else "Demo School"
+            return {"found": True, "name": name}
+        if source == "AISHE":
+            name = "Wrong College" if "AISHE" in self.mismatches else "Demo College"
+            return {"found": True, "name": name, "top_class_notified": True}
+        if source == "UGC_NTA":
+            qualified = False if "UGC_NTA" in self.mismatches else True
+            return {"found": True, "qualified": qualified, "name": "Sunita Oraon"}
+        raise AssertionError(f"unexpected call {source}.{op}")
+
+
+MULTI_PROFILE = {
+    "full_name": "Sunita Oraon", "dob": "2010-05-14", "gender": "F", "category": "ST", "tribe_name": "Oraon",
+    "aadhaar_hash": "abc", "annual_family_income": 120000, "course_level": "CLASS_10",
+    "apaar_id": "123456789012", "institution_code": "UDISE123", "institution_name": "Demo School",
+    "ugc_nta_roll": "NTA123", "scheme_code": "NFST"
+}
+
+
+def test_multi_source_all_match():
+    rep = run_verification(MULTI_PROFILE, MultiSourceFakeGateway(), {"UIDAI", "EDISTRICT", "APAAR", "UDISE", "UGC_NTA"})
+    assert rep["status"] == "VERIFIED"
+    assert rep["all_satisfy"] is True
+    assert not rep["mismatches"]
+
+
+def test_apaar_mismatch_triggers_review():
+    rep = run_verification(MULTI_PROFILE, MultiSourceFakeGateway(mismatches={"APAAR"}), {"UIDAI", "EDISTRICT", "APAAR", "UDISE", "UGC_NTA"})
+    assert rep["status"] == "NEEDS_REVIEW"
+    assert rep["all_satisfy"] is False
+    assert "APAAR" in rep["mismatches"]
+
+
+def test_institutional_mismatch_triggers_review():
+    rep = run_verification(MULTI_PROFILE, MultiSourceFakeGateway(mismatches={"UDISE"}), {"UIDAI", "EDISTRICT", "APAAR", "UDISE", "UGC_NTA"})
+    assert rep["status"] == "NEEDS_REVIEW"
+    assert rep["all_satisfy"] is False
+    assert "UDISE" in rep["mismatches"]
+
+
+def test_ugc_nta_qualification_verification():
+    ugc_profile = {"ugc_nta_roll": "NTA123", "scheme_code": "NFST", "full_name": "Sunita Oraon", "course_level": "PG"}
+    rep = run_verification(ugc_profile, MultiSourceFakeGateway(), {"UGC_NTA"})
+    assert rep["status"] == "VERIFIED"
+    assert rep["all_satisfy"] is True
+    
+    rep_fail = run_verification(ugc_profile, MultiSourceFakeGateway(mismatches={"UGC_NTA"}), {"UGC_NTA"})
+    assert rep_fail["status"] == "NEEDS_REVIEW"
+    assert "UGC_NTA" in rep_fail["mismatches"]
 
 
 # --------------------------------------------------------------- assistant

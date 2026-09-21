@@ -25,6 +25,10 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(default=True)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
     profile: Mapped[Optional["StudentProfile"]] = relationship(back_populates="user", uselist=False)
+    # DigiLocker sandbox OAuth — token stored encrypted (Fernet), cleared on revoke
+    digilocker_token: Mapped[Optional[str]] = mapped_column(Text)        # encrypted access token
+    digilocker_token_expiry: Mapped[Optional[datetime]] = mapped_column()  # UTC expiry
+    digilocker_state: Mapped[Optional[str]] = mapped_column(String(64))  # CSRF state param
 
 
 class StudentProfile(Base):
@@ -134,6 +138,8 @@ class Application(Base):
     paid_amount: Mapped[Optional[float]]
     utr: Mapped[Optional[str]] = mapped_column(String(30))
     submitted_at: Mapped[Optional[datetime]]
+    auto_verified: Mapped[bool] = mapped_column(default=False)
+    verification_report: Mapped[Optional[dict]] = mapped_column(default=None)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(default=utcnow, onupdate=utcnow, index=True)
     events: Mapped[list["ApplicationEvent"]] = relationship(

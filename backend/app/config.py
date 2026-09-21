@@ -46,6 +46,16 @@ class Settings(BaseSettings):
     mtls_ca: str = ""
     live_endpoints_json: str = "{}"  # JSON object: {"UIDAI": "https://...", ...}
 
+    # --- DigiLocker sandbox OAuth2 --------------------------------------------
+    digilocker_client_id: str = ""
+    digilocker_client_secret: str = ""
+    digilocker_redirect_uri: str = "http://localhost:8000/api/v1/wallet/digilocker/callback"
+    digilocker_sandbox: bool = True  # True → sandbox.digilocker.gov.in, False → api.digilocker.gov.in
+
+    @property
+    def digilocker_base_url(self) -> str:
+        return "https://sandbox.digilocker.gov.in" if self.digilocker_sandbox else "https://api.digilocker.gov.in"
+
     @property
     def outage_set(self) -> set[str]:
         return {s.strip().upper() for s in self.simulate_outages.split(",") if s.strip()}

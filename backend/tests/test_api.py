@@ -236,3 +236,37 @@ def test_jago_answers_in_hindi_and_english(client, sunita):
     en = client.post(f"{API}/assistant/chat", json={"message": "Where is my application?"}, headers=sunita).json()
     hi = client.post(f"{API}/assistant/chat", json={"message": "मेरा आवेदन कहाँ है?"}, headers=sunita).json()
     assert en["intent"] == "status" and hi["language"] == "hi"
+
+
+def test_digilocker_oauth_connect_returns_url(client, sunita):
+    """GET /wallet/digilocker/connect returns a well-formed response.
+
+    When sandbox credentials are not configured (the default in tests),
+    ``sandbox_configured`` must be False and no ``auth_url`` is present.
+    When credentials ARE configured the response must include an ``auth_url``
+    that starts with the DigiLocker base URL.
+    """
+    r = client.get(f"{API}/wallet/digilocker/connect", headers=sunita)
+    assert r.status_code == 200
+    body = r.json()
+    # Either sandbox is configured (has auth_url) or not (has message)
+    if body.get("sandbox_configured"):
+        assert "auth_url" in body
+        base = settings.digilocker_base_url
+        assert body["auth_url"].startswith(base), f"auth_url should start with {base}"
+        assert "already_connected" in body
+    else:
+        # No credentials in .env → graceful degradation
+        assert body["sandbox_configured"] is False
+        assert "message" in body
+
+
+def test_digilocker_status_endpoint(client, sunita):
+    """GET /wallet/digilocker/status returns connection state."""
+    r = client.get(f"{API}/wallet/digilocker/status", headers=sunita)
+    assert r.status_code == 200
+    body = r.json()
+    assert "sandbox_configured" in body
+    assert "connected" in body
+    # In tests the demo student has no stored token
+    assert body["connected"] is False

@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+
 
 import 'package:http/http.dart' as http;
 
@@ -85,11 +85,11 @@ class ApiClient {
     return _decode(r);
   }
 
-  Future<dynamic> uploadFile(String path, {required String fieldName, required File file, required Map<String, String> fields}) async {
+  Future<dynamic> uploadFile(String path, {required String fieldName, required String filename, required List<int> bytes, required Map<String, String> fields}) async {
     final req = http.MultipartRequest('POST', _uri(path))
       ..headers.addAll(_headers)
       ..fields.addAll(fields)
-      ..files.add(await http.MultipartFile.fromPath(fieldName, file.path));
+      ..files.add(http.MultipartFile.fromBytes(fieldName, bytes, filename: filename));
     final streamed = await _http.send(req);
     final r = await http.Response.fromStream(streamed);
     return _decode(r);
@@ -141,11 +141,34 @@ class ApiClient {
   // ------------------------------------------------------------- wallet
   Future<List<dynamic>> digilockerDocuments() async => (await get('/wallet/digilocker')) as List<dynamic>;
 
+  /// Returns ``{sandbox_configured, auth_url?, already_connected}``.
+  /// Open ``auth_url`` in a browser to start the DigiLocker OAuth2 flow.
+  Future<Map<String, dynamic>> digilockerConnect() async =>
+      (await get('/wallet/digilocker/connect')) as Map<String, dynamic>;
+
+  /// Returns ``{sandbox_configured, connected, expiry?}``.
+  Future<Map<String, dynamic>> digilockerStatus() async =>
+      (await get('/wallet/digilocker/status')) as Map<String, dynamic>;
+
+  /// Clears the stored DigiLocker token for the current user.
+  Future<void> digilockerDisconnect() async => delete('/wallet/digilocker/disconnect');
+
   Future<Map<String, dynamic>> importDigilockerDoc(String uri) async =>
       (await post('/wallet/import', body: {'uri': uri})) as Map<String, dynamic>;
 
-  Future<Map<String, dynamic>> uploadDocument(String docType, File file) async =>
-      (await uploadFile('/wallet/upload', fieldName: 'file', file: file, fields: {'doc_type': docType})) as Map<String, dynamic>;
+  Future<Map<String, dynamic>> fetchCustomDigilockerDoc({
+    required String docType,
+    required String docNumber,
+    String? issuer,
+  }) async =>
+      (await post('/wallet/digilocker/fetch_custom', body: {
+        'doc_type': docType,
+        'doc_number': docNumber,
+        if (issuer != null && issuer.isNotEmpty) 'issuer': issuer,
+      })) as Map<String, dynamic>;
+
+  Future<Map<String, dynamic>> uploadDocument(String docType, String filename, List<int> bytes) async =>
+      (await uploadFile('/wallet/upload', fieldName: 'file', filename: filename, bytes: bytes, fields: {'doc_type': docType})) as Map<String, dynamic>;
 
   Future<List<dynamic>> walletDocuments() async => (await get('/wallet/documents')) as List<dynamic>;
 
@@ -155,6 +178,14 @@ class ApiClient {
       (await post('/wallet/documents/$docId/use', body: {'application_id': applicationId})) as Map<String, dynamic>;
 
   // -------------------------------------------------------- applications
+  String getReceiptUrl(int id) {
+    var u = _uri('/applications/$id/receipt.pdf', token != null ? {'token': token} : null);
+    if (u.host == 'localhost') {
+      u = u.replace(host: '127.0.0.1');
+    }
+    return u.toString();
+  }
+
   Future<Map<String, dynamic>> createApplication(String schemeCode, {String academicYear = '2026-27', String? clientUuid}) async =>
       (await post('/applications', body: {
         'scheme_code': schemeCode,

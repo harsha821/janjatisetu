@@ -85,7 +85,7 @@ class _BridgePainter extends CustomPainter {
     final centers = List.generate(n, (i) => step * i + step / 2);
 
     final deckPaint = Paint()
-      ..color = AppColors.pending.withOpacity(0.5)
+      ..color = AppColors.pending.withValues(alpha: 0.5)
       ..strokeWidth = 2;
     canvas.drawLine(Offset(centers.first, midY), Offset(centers.last, midY), deckPaint);
 
@@ -99,7 +99,7 @@ class _BridgePainter extends CustomPainter {
       if (isSkippedSpan) continue; // no span drawn into/out of a skipped stage — it's a dot, not a pier
       final spanPaint = Paint()
         ..strokeWidth = done ? 4 : 2
-        ..color = done ? AppColors.primary : AppColors.pending.withOpacity(0.6)
+        ..color = done ? AppColors.primary : AppColors.pending.withValues(alpha: 0.6)
         ..strokeCap = StrokeCap.round;
       if (done) {
         canvas.drawLine(p1, p2, spanPaint);
@@ -122,7 +122,7 @@ class _BridgePainter extends CustomPainter {
           c,
           radius + 4,
           Paint()
-            ..color = AppColors.accent.withOpacity(0.25)
+            ..color = AppColors.accent.withValues(alpha: 0.25)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 3,
         );

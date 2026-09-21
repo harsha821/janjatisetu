@@ -16,10 +16,14 @@ class AppConfig {
   static String get apiBaseUrl {
     if (_override.isNotEmpty) return _override;
     if (kIsWeb) {
-      final host = Uri.base.host.isNotEmpty ? Uri.base.host : 'localhost';
+      String host = Uri.base.host.isNotEmpty ? Uri.base.host : '127.0.0.1';
+      if (host == 'localhost') host = '127.0.0.1';
       return 'http://$host:8000/api/v1';
     }
-    return 'http://10.0.2.2:8000/api/v1';
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return 'http://10.0.2.2:8000/api/v1';
+    }
+    return 'http://127.0.0.1:8000/api/v1';
   }
 
   static const String appName = 'JanjatiSetu';

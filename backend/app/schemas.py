@@ -65,6 +65,12 @@ class WalletImportIn(BaseModel):
     uri: str
 
 
+class DigiLockerFetchIn(BaseModel):
+    doc_type: DOC_TYPES
+    doc_number: str
+    issuer: Optional[str] = "DigiLocker National Registry"
+
+
 class UseDocIn(BaseModel):
     application_id: int
 

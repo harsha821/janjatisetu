@@ -105,8 +105,8 @@ class _AdminApplicationsScreenState extends State<AdminApplicationsScreen> {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       if ((a['open_cases'] as int? ?? 0) > 0)
-                                        Padding(
-                                          padding: const EdgeInsets.only(right: 6),
+                                        const Padding(
+                                          padding: EdgeInsets.only(right: 6),
                                           child: Icon(Icons.flag, size: 16, color: AppColors.danger),
                                         ),
                                       StatusChip(label: a['status'] as String, status: a['status'] as String),

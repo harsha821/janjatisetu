@@ -397,174 +397,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _verify() async {
-    _runFullAutoVerification();
-  }
-
-  Future<void> _runFullAutoVerification() async {
-    int currentStep = 0;
-    final steps = [
-      {'title': 'UIDAI Aadhaar Identity Authentication', 'desc': 'Matching Full Name, DOB and Gender against National Identity Base', 'source': 'UIDAI'},
-      {'title': 'e-District Caste Certificate (ST Category)', 'desc': 'Validating Scheduled Tribe certificate directly with State Revenue Dept', 'source': 'EDISTRICT'},
-      {'title': 'e-District Income Certificate Validation', 'desc': 'Verifying annual family income within scholarship threshold (≤ ₹6.0L)', 'source': 'EDISTRICT'},
-      {'title': 'AISHE / UDISE+ Institution Accreditation', 'desc': 'Validating College / School code with Ministry of Education Registry', 'source': 'MOE_AISHE'},
-      {'title': '10th & 12th Board Marksheet & Roll Verification', 'desc': 'Authenticating Secondary & Higher Secondary Board examination marks', 'source': 'BOARD_REGISTRY'},
-      {'title': 'PFMS & NPCI Bank Account DBT Seeding', 'desc': 'Verifying active bank account for direct scholarship disbursement', 'source': 'PFMS_DBT'},
-    ];
-
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setModalState) {
-          if (currentStep == 0) {
-            Future.delayed(const Duration(milliseconds: 300), () async {
-              for (int i = 1; i <= steps.length; i++) {
-                await Future.delayed(const Duration(milliseconds: 550));
-                if (ctx.mounted) {
-                  setModalState(() => currentStep = i);
-                }
-              }
-              try {
-                await this.context.read<StudentState>().api.verifyProfile();
-                await this.context.read<StudentState>().refreshProfile();
-                await this.context.read<StudentState>().refreshEligibility();
-              } catch (_) {}
-            });
-          }
-
-          final isDone = currentStep >= steps.length;
-
-          return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            contentPadding: const EdgeInsets.all(20),
-            title: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: isDone ? const Color(0xFFDCFCE7) : const Color(0xFFEFF6FF),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    isDone ? Icons.verified : Icons.auto_mode,
-                    color: isDone ? const Color(0xFF166534) : const Color(0xFF2563EB),
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        isDone ? 'Auto-Verification Succeeded!' : 'Running Auto-Verification...',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F172A)),
-                      ),
-                      Text(
-                        isDone ? '100% Pre-Screen Verified via Government Registries' : 'Cross-checking AISHE, Caste, Marksheet & UIDAI',
-                        style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(height: 6),
-                  ...List.generate(steps.length, (idx) {
-                    final item = steps[idx];
-                    final stepPassed = currentStep > idx;
-                    final stepActive = currentStep == idx;
-
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 22,
-                            height: 22,
-                            margin: const EdgeInsets.only(top: 2),
-                            decoration: BoxDecoration(
-                              color: stepPassed
-                                  ? const Color(0xFF00B97A)
-                                  : stepActive
-                                      ? const Color(0xFF2563EB)
-                                      : const Color(0xFFE2E8F0),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Center(
-                              child: stepPassed
-                                  ? const Icon(Icons.check, color: Colors.white, size: 14)
-                                  : stepActive
-                                      ? const SizedBox(width: 10, height: 10, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                      : null,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  item['title']!,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                    color: stepPassed ? const Color(0xFF065F46) : (stepActive ? const Color(0xFF1D4ED8) : const Color(0xFF64748B)),
-                                  ),
-                                ),
-                                const SizedBox(height: 1),
-                                Text(
-                                  item['desc']!,
-                                  style: TextStyle(fontSize: 10, color: stepPassed ? const Color(0xFF047857) : const Color(0xFF94A3B8)),
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (stepPassed)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(4)),
-                              child: const Text('MATCH', style: TextStyle(color: Color(0xFF166534), fontSize: 9, fontWeight: FontWeight.bold)),
-                            ),
-                        ],
-                      ),
-                    );
-                  }),
-                ],
-              ),
-            ),
-            actions: [
-              if (isDone)
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF002970),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      ScaffoldMessenger.of(this.context).showSnackBar(const SnackBar(
-                        content: Text('✓ Profile 100% Verified — All Eligible Schemes Unlocked!'),
-                        backgroundColor: AppColors.success,
-                      ));
-                    },
-                    child: const Text('View Unlocked Scholarships', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                  ),
-                ),
-            ],
-          );
-        },
-      ),
-    );
+    setState(() => _busy = true);
+    try {
+      await context.read<StudentState>().api.verifyProfile();
+      await context.read<StudentState>().refreshProfile();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Verification re-checked')));
+    } on ApiException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _toggleConsent(String purpose, bool granted) async {
@@ -701,49 +543,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const SizedBox(height: 12),
                     SectionCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                  Text(s.verification, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                                  const SizedBox(height: 4),
-                                  StatusChip(label: '${p['verification_status'] ?? 'NOT_VERIFIED'}', status: p['verification_status'] == 'VERIFIED' ? 'VERIFIED' : 'SUBMITTED'),
-                                  if (p['verification_confidence'] != null)
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 4),
-                                      child: Text('Confidence ${((p['verification_confidence'] as num) * 100).toStringAsFixed(0)}% · UIDAI, AISHE, e-District & Board', style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                                    ),
-                                ]),
+                      child: Row(children: [
+                        Expanded(
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text(s.verification, style: const TextStyle(fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 4),
+                            StatusChip(label: '${p['verification_status'] ?? 'NOT_VERIFIED'}', status: p['verification_status'] == 'VERIFIED' ? 'VERIFIED' : 'SUBMITTED'),
+                            if (p['verification_confidence'] != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text('Confidence ${((p['verification_confidence'] as num) * 100).toStringAsFixed(0)}%', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                               ),
-                              ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF002970),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                ),
-                                onPressed: _runFullAutoVerification,
-                                icon: const Icon(Icons.verified, size: 16),
-                                label: const Text('Auto-Verify', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                              ),
-                            ],
-                          ),
-                          const Divider(height: 20),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: const [
-                              _MiniBadge(icon: Icons.fingerprint, label: 'UIDAI'),
-                              _MiniBadge(icon: Icons.account_balance, label: 'AISHE/UDISE'),
-                              _MiniBadge(icon: Icons.badge, label: 'Caste Cert'),
-                              _MiniBadge(icon: Icons.grade, label: 'Marksheet'),
-                              _MiniBadge(icon: Icons.payments, label: 'DBT Bank'),
-                            ],
-                          ),
-                        ],
-                      ),
+                          ]),
+                        ),
+                        TextButton(onPressed: _busy ? null : _verify, child: Text(s.verifyNow)),
+                      ]),
                     ),
                     const SizedBox(height: 16),
                     Text(s.language, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -910,7 +724,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         children: [
                           Expanded(
                             child: DropdownButtonFormField<String>(
-                              value: _schoolClass,
+                              initialValue: _schoolClass,
                               decoration: const InputDecoration(labelText: 'Class / Standard *'),
                               items: _schoolClasses.map((c) => DropdownMenuItem(value: c, child: Text(c.replaceAll('_', ' ')))).toList(),
                               onChanged: (v) => setState(() => _schoolClass = v!),
@@ -919,7 +733,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           const SizedBox(width: 10),
                           Expanded(
                             child: DropdownButtonFormField<String>(
-                              value: _schoolBoard,
+                              initialValue: _schoolBoard,
                               decoration: const InputDecoration(labelText: 'Board *'),
                               items: _boards.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
                               onChanged: (v) => setState(() => _schoolBoard = v!),
@@ -932,7 +746,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         children: [
                           Expanded(
                             child: DropdownButtonFormField<String>(
-                              value: _academicYear,
+                              initialValue: _academicYear,
                               decoration: const InputDecoration(labelText: 'Academic Year *'),
                               items: ['2024-2025', '2025-2026', '2026-2027'].map((y) => DropdownMenuItem(value: y, child: Text(y))).toList(),
                               onChanged: (v) => setState(() => _academicYear = v!),
@@ -999,7 +813,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         children: [
                           Expanded(
                             child: DropdownButtonFormField<String>(
-                              value: _collegeLevel,
+                              initialValue: _collegeLevel,
                               decoration: const InputDecoration(labelText: 'Course Level *'),
                               items: _collegeLevels.map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
                               onChanged: (v) => setState(() => _collegeLevel = v!),
@@ -1030,7 +844,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           const SizedBox(width: 10),
                           Expanded(
                             child: DropdownButtonFormField<String>(
-                              value: _academicYear,
+                              initialValue: _academicYear,
                               decoration: const InputDecoration(labelText: 'Academic Year *'),
                               items: ['2024-2025', '2025-2026', '2026-2027'].map((y) => DropdownMenuItem(value: y, child: Text(y))).toList(),
                               onChanged: (v) => setState(() => _academicYear = v!),
@@ -1197,7 +1011,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   const SizedBox(width: 10),
                                   Expanded(
                                     child: DropdownButtonFormField<String>(
-                                      value: _twelfthStream,
+                                      initialValue: _twelfthStream,
                                       decoration: const InputDecoration(labelText: 'Stream *'),
                                       items: _streams.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
                                       onChanged: (v) => setState(() => _twelfthStream = v!),
@@ -1243,7 +1057,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             if (_hasCompetitiveExam) ...[
                               const Divider(height: 20),
                               DropdownButtonFormField<String>(
-                                value: _examName,
+                                initialValue: _examName,
                                 decoration: const InputDecoration(labelText: 'Exam Name *'),
                                 items: [
                                   'JEE Main',
@@ -1296,7 +1110,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                               const SizedBox(height: 10),
                               DropdownButtonFormField<String>(
-                                value: _examResult,
+                                initialValue: _examResult,
                                 decoration: const InputDecoration(labelText: 'Qualification / Result *'),
                                 items: ['Qualified', 'Not Qualified', 'Result Awaited'].map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
                                 onChanged: (v) => setState(() => _examResult = v!),
@@ -1413,35 +1227,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
             ),
-    );
-  }
-}
-
-class _MiniBadge extends StatelessWidget {
-  const _MiniBadge({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: const Color(0xFFEFF6FF),
-            shape: BoxShape.circle,
-            border: Border.all(color: const Color(0xFFBFDBFE)),
-          ),
-          child: Icon(icon, size: 16, color: const Color(0xFF1D4ED8)),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
-        ),
-      ],
     );
   }
 }

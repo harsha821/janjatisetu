@@ -60,7 +60,7 @@ class _SchemesScreenState extends State<SchemesScreen> {
       body: schemes.isEmpty
           ? RefreshIndicator(
               onRefresh: () => state.loadAll(),
-              child: ListView(children: [const SizedBox(height: 120), EmptyView(message: 'No schemes loaded yet.', icon: Icons.school_outlined)]),
+              child: ListView(children: const [SizedBox(height: 120), EmptyView(message: 'No schemes loaded yet.', icon: Icons.school_outlined)]),
             )
           : RefreshIndicator(
               onRefresh: () => state.loadAll(),
@@ -134,7 +134,10 @@ class _SchemeCard extends StatelessWidget {
           Align(
             alignment: Alignment.centerRight,
             child: existingApp != null
-                ? OutlinedButton(onPressed: onOpen, child: Text(s.continueApplication))
+                ? OutlinedButton(
+                    onPressed: onOpen,
+                    child: Text(existingApp!['status'] == 'DRAFT' ? s.continueApplication : s.alreadyApplied),
+                  )
                 : ElevatedButton(
                     onPressed: (status == 'NOT_ELIGIBLE' || busy) ? null : onApply,
                     child: Text(s.startApplication),

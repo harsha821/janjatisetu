@@ -18,7 +18,9 @@ router = APIRouter(prefix="/profile", tags=["profile"])
 def _verification_profile(user: User, p) -> dict:
     return {"full_name": user.full_name, "dob": p.dob.isoformat() if p.dob else None, "gender": p.gender,
             "category": p.category, "tribe_name": p.tribe_name, "aadhaar_hash": p.aadhaar_hash,
-            "annual_family_income": p.annual_family_income, "course_level": p.course_level}
+            "annual_family_income": p.annual_family_income, "course_level": p.course_level,
+            "apaar_id": p.apaar_id, "institution_code": p.institution_code, "institution_name": p.institution_name,
+            "ugc_nta_roll": p.ugc_nta_roll, "ugc_nta_qualified": p.ugc_nta_qualified}
 
 
 @router.get("")

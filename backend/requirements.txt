@@ -29,3 +29,6 @@ psycopg2-binary==2.9.10
 
 # Optional: enable for real push notifications (see README "Production checklist")
 # firebase-admin==6.6.0
+
+# PDF Generation
+fpdf2==2.8.2

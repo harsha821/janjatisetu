@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
+from fpdf import FPDF
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -170,3 +172,62 @@ def resolve(app_id: int, def_id: int, body: ResolveDeficiencyIn, user: User = De
     audit(db, user, "RESOLVE_DEFICIENCY", "application", app.id)
     db.commit()
     return application_out(app, scheme, detail=True)
+
+
+@router.get("/applications/{app_id}/receipt.pdf")
+def download_receipt(app_id: int, user: User = Depends(student_only), db: Session = Depends(get_db)):
+    app = _own(db, user, app_id)
+    scheme = db.get(Scheme, app.scheme_code)
+    
+    pdf = FPDF()
+    pdf.add_page()
+    
+    # Title Block
+    pdf.set_fill_color(0, 41, 112)  # Dark Blue
+    pdf.set_text_color(255, 255, 255) # White
+    pdf.set_font("helvetica", "B", 18)
+    pdf.cell(0, 15, "JanjatiSetu - Application Receipt", ln=True, align="C", fill=True)
+    pdf.ln(10)
+    
+    # Basic Info
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font("helvetica", "", 12)
+    pdf.cell(0, 8, f"Application ID: JS-APP-{app.id}", ln=True)
+    pdf.cell(0, 8, f"Scheme: {scheme.name if scheme else app.scheme_code}", ln=True)
+    pdf.set_text_color(0, 128, 0) if app.status in ("SUBMITTED", "VERIFIED") else pdf.set_text_color(230, 81, 0)
+    pdf.cell(0, 8, f"Status: {app.status}", ln=True)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(0, 8, f"Submitted On: {app.submitted_at.strftime('%Y-%m-%d %H:%M') if app.submitted_at else 'N/A'}", ln=True)
+    pdf.ln(10)
+    
+    # Applicant Details Header
+    pdf.set_fill_color(226, 238, 248) # Light Blue
+    pdf.set_text_color(0, 41, 112) # Dark Blue
+    pdf.set_font("helvetica", "B", 14)
+    pdf.cell(0, 10, "  Applicant Details", ln=True, fill=True)
+    
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font("helvetica", "", 12)
+    pdf.cell(0, 8, f"  Name: {user.full_name}", ln=True)
+    
+    if app.form_data:
+        pdf.ln(10)
+        pdf.set_fill_color(226, 238, 248)
+        pdf.set_text_color(0, 41, 112)
+        pdf.set_font("helvetica", "B", 14)
+        pdf.cell(0, 10, "  Application Data", ln=True, fill=True)
+        pdf.set_text_color(50, 50, 50)
+        pdf.set_font("helvetica", "", 10)
+        for k, v in app.form_data.items():
+            if not k.startswith("_"):
+                label = k.replace('_', ' ').title()
+                val = str(v).encode('latin-1', 'replace').decode('latin-1')
+                pdf.cell(0, 6, f"  {label}: {val}", ln=True)
+                
+    pdf_bytes = pdf.output()
+    return Response(
+        content=bytes(pdf_bytes), 
+        media_type="application/pdf", 
+        headers={"Content-Disposition": f'attachment; filename="JS-APP-{app.id}.pdf"'}
+    )
+

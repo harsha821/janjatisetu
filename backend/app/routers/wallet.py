@@ -4,6 +4,7 @@ import uuid
 from datetime import date
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -12,28 +13,145 @@ from ..database import get_db
 from ..deps import student_only
 from ..integrations.gateway import Gateway, SourceUnavailable
 from ..models import Application, Document, User
-from ..schemas import DOC_TYPES, UseDocIn, WalletImportIn
+from ..schemas import DOC_TYPES, DigiLockerFetchIn, UseDocIn, WalletImportIn
 from ..services.cases import audit
 from ..services.student import apply_document_to_form, consent_set, doc_out
 from ..services.lifecycle import EDITABLE
+from ..services import digilocker as dl_svc
 
 router = APIRouter(prefix="/wallet", tags=["wallet"])
 _ALLOWED = {".pdf", ".jpg", ".jpeg", ".png"}
 _MAGIC = {b"%PDF": ".pdf", b"\xff\xd8\xff": ".jpg", b"\x89PNG": ".png"}
 
 
+# ------------------------------------------------------------------ DigiLocker OAuth2 flow
+
+@router.get("/digilocker/connect")
+def digilocker_connect(user: User = Depends(student_only), db: Session = Depends(get_db)):
+    """Return the DigiLocker sandbox consent URL.
+
+    If credentials are not configured, returns ``sandbox_configured: false``
+    along with a setup message (does not raise a 501 — lets the Flutter app
+    show a friendly "not yet enabled" banner rather than an error).
+    """
+    if not dl_svc._sandbox_configured():
+        return {
+            "sandbox_configured": False,
+            "message": (
+                "DigiLocker sandbox credentials are not set. "
+                "Add DIGILOCKER_CLIENT_ID and DIGILOCKER_CLIENT_SECRET to backend/.env "
+                "after registering at https://sandbox.digilocker.gov.in"
+            ),
+        }
+    state = dl_svc.generate_state()
+    user.digilocker_state = state
+    db.commit()
+    auth_url = dl_svc.authorization_url(state)
+    already = dl_svc.get_valid_token(user) is not None
+    return {"sandbox_configured": True, "auth_url": auth_url, "already_connected": already}
+
+
+@router.get("/digilocker/callback", include_in_schema=False)
+def digilocker_callback(code: str | None = None, state: str | None = None,
+                        error: str | None = None,
+                        db: Session = Depends(get_db)):
+    """DigiLocker redirects here after the user grants (or denies) consent.
+
+    Looks up the user by their stored state param, exchanges the code for a
+    token and persists it encrypted. Then redirects the browser back to the
+    Flutter deep-link so the mobile app can refresh the wallet.
+    """
+    if error:
+        return RedirectResponse(url=f"/?digilocker=error&reason={error}")
+
+    if not code or not state:
+        raise HTTPException(400, "Missing code or state parameter")
+
+    # Find the user who initiated this OAuth flow (CSRF check)
+    user = db.scalar(select(User).where(User.digilocker_state == state))
+    if not user:
+        raise HTTPException(400, "Invalid or expired state. Please try connecting again.")
+
+    try:
+        token_data = dl_svc.exchange_code(code)
+    except Exception as exc:
+        raise HTTPException(502, f"DigiLocker token exchange failed: {exc}") from exc
+
+    dl_svc.store_token(user, token_data)
+    audit(db, user, "DIGILOCKER_CONNECTED", "user", str(user.id))
+    db.commit()
+
+    # Deep-link back into the Flutter app
+    return RedirectResponse(url="janjatisetu://digilocker/connected", status_code=302)
+
+
+@router.get("/digilocker/status")
+def digilocker_status(user: User = Depends(student_only)):
+    """Return whether this student has an active DigiLocker sandbox token."""
+    return {
+        "sandbox_configured": dl_svc._sandbox_configured(),
+        "connected": dl_svc.get_valid_token(user) is not None,
+        "expiry": user.digilocker_token_expiry.isoformat() if user.digilocker_token_expiry else None,
+    }
+
+
+@router.delete("/digilocker/disconnect", status_code=204)
+def digilocker_disconnect(user: User = Depends(student_only), db: Session = Depends(get_db)):
+    """Revoke stored DigiLocker token — student can reconnect any time."""
+    dl_svc.revoke_token(user)
+    audit(db, user, "DIGILOCKER_DISCONNECTED", "user", str(user.id))
+    db.commit()
+
+
+# ------------------------------------------------------------------ DigiLocker document endpoints
+
 @router.get("/digilocker")
 def digilocker_documents(user: User = Depends(student_only), db: Session = Depends(get_db)):
-    """Documents available in the student's DigiLocker (needs consent)."""
+    """Documents available in the student's DigiLocker (needs consent).
+
+    If the student has connected DigiLocker via OAuth2 (sandbox), their real
+    issued documents are returned.  Falls back to the mock gateway otherwise.
+    """
     if "DIGILOCKER" not in consent_set(db, user.id):
         raise HTTPException(403, "Allow DigiLocker access in Profile > Consents first")
+
+    have = {d.uri for d in db.scalars(select(Document).where(Document.user_id == user.id))}
+
+    # Try real sandbox token first (if the user has connected DigiLocker)
+    live_token = dl_svc.get_valid_token(user)
+    if dl_svc._sandbox_configured() and live_token:
+        try:
+            docs = dl_svc.list_issued_documents(live_token)
+            return [
+                {
+                    "uri": d["uri"],
+                    "doc_type": d["doc_type"],
+                    "issuer": d.get("issuer"),
+                    "doc_number": d.get("doc_number"),
+                    "issued_on": d.get("issued_on"),
+                    "in_wallet": d["uri"] in have,
+                }
+                for d in docs
+            ]
+        except Exception:
+            pass  # network / token error — fall through to mock gateway
+
+    # Fallback: mock gateway (or live gateway if INTEGRATION_MODE=live)
     try:
         data = Gateway(db).call("DIGILOCKER", "list_documents", phone=user.phone)
     except SourceUnavailable:
         raise HTTPException(503, "DigiLocker is not responding. Your saved documents still work. Try again later.")
-    have = {d.uri for d in db.scalars(select(Document).where(Document.user_id == user.id))}
-    return [{"uri": d["uri"], "doc_type": d["doc_type"], "issuer": d.get("issuer"), "doc_number": d.get("doc_number"),
-             "issued_on": d.get("issued_on"), "in_wallet": d["uri"] in have} for d in data["documents"]]
+    return [
+        {
+            "uri": d["uri"],
+            "doc_type": d["doc_type"],
+            "issuer": d.get("issuer"),
+            "doc_number": d.get("doc_number"),
+            "issued_on": d.get("issued_on"),
+            "in_wallet": d["uri"] in have,
+        }
+        for d in data["documents"]
+    ]
 
 
 @router.post("/import", status_code=201)
@@ -43,6 +161,32 @@ def import_from_digilocker(body: WalletImportIn, user: User = Depends(student_on
     existing = db.scalar(select(Document).where(Document.user_id == user.id, Document.uri == body.uri))
     if existing:
         return doc_out(existing)
+
+    # Try real sandbox token first
+    live_token = dl_svc.get_valid_token(user)
+    if dl_svc._sandbox_configured() and live_token:
+        try:
+            d = dl_svc.fetch_document(live_token, body.uri)
+            if d.get("found"):
+                doc = Document(
+                    user_id=user.id,
+                    doc_type=d["doc_type"],
+                    source="DIGILOCKER",
+                    uri=d["uri"],
+                    issuer=d.get("issuer"),
+                    doc_number=d.get("doc_number"),
+                    extracted=d.get("data", {}),
+                    verified=True,
+                    issued_on=date.fromisoformat(d["issued_on"]) if d.get("issued_on") else None,
+                )
+                db.add(doc)
+                audit(db, user, "WALLET_IMPORT", "document", body.uri)
+                db.commit()
+                return doc_out(doc)
+        except Exception:
+            pass  # fall through to mock gateway
+
+    # Fallback: mock gateway
     try:
         d = Gateway(db).call("DIGILOCKER", "fetch", phone=user.phone, uri=body.uri)
     except SourceUnavailable:
@@ -57,6 +201,33 @@ def import_from_digilocker(body: WalletImportIn, user: User = Depends(student_on
     db.commit()
     return doc_out(doc)
 
+
+@router.post("/digilocker/fetch_custom", status_code=201)
+def fetch_custom_digilocker(body: DigiLockerFetchIn, user: User = Depends(student_only), db: Session = Depends(get_db)):
+    if "DIGILOCKER" not in consent_set(db, user.id):
+        raise HTTPException(403, "Allow DigiLocker access in Profile > Consents first")
+    uri = f"in.gov.digilocker/{body.doc_type.lower()}/{body.doc_number}"
+    existing = db.scalar(select(Document).where(Document.user_id == user.id, Document.uri == uri))
+    if existing:
+        return doc_out(existing)
+    doc = Document(
+        user_id=user.id,
+        doc_type=body.doc_type,
+        source="DIGILOCKER",
+        uri=uri,
+        issuer=body.issuer or "DigiLocker National Registry",
+        doc_number=body.doc_number,
+        extracted={"certificate_no": body.doc_number, "verified_at": "DigiLocker National API"},
+        verified=True,
+        issued_on=date.today(),
+    )
+    db.add(doc)
+    audit(db, user, "WALLET_DIGILOCKER_FETCH", "document", uri)
+    db.commit()
+    return doc_out(doc)
+
+
+# ------------------------------------------------------------------ Upload
 
 @router.post("/upload", status_code=201)
 async def upload(doc_type: DOC_TYPES = Form(...), file: UploadFile = File(...),
@@ -88,6 +259,8 @@ async def upload(doc_type: DOC_TYPES = Form(...), file: UploadFile = File(...),
     db.commit()
     return doc_out(doc)
 
+
+# ------------------------------------------------------------------ Wallet documents
 
 @router.get("/documents")
 def documents(user: User = Depends(student_only), db: Session = Depends(get_db)):

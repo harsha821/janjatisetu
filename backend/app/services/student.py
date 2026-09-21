@@ -83,7 +83,9 @@ def _profile_for_rules(profile: StudentProfile) -> dict:
         "category": profile.category, "course_level": profile.course_level, "dob": _iso(profile.dob),
         "annual_family_income": profile.annual_family_income, "is_pvtg": profile.is_pvtg,
         "foreign_admission": profile.foreign_admission, "last_exam_percentage": profile.last_exam_percentage,
-        "ugc_nta_qualified": profile.ugc_nta_qualified,
+        "ugc_nta_qualified": profile.ugc_nta_qualified, "apaar_id": profile.apaar_id,
+        "institution_code": profile.institution_code, "institution_name": profile.institution_name,
+        "ugc_nta_roll": profile.ugc_nta_roll,
     }
 
 
@@ -150,6 +152,8 @@ def application_out(app: Application, scheme: Scheme | None, detail: bool = Fals
         "open_deficiencies": [{"id": d.id, "message": d.message, "doc_type": d.doc_type}
                               for d in app.deficiencies if not d.resolved],
         "timeline": timeline_for(app),
+        "auto_verified": bool(getattr(app, "auto_verified", False)),
+        "verification_report": getattr(app, "verification_report", None),
     }
     if detail:
         out["form_data"] = app.form_data

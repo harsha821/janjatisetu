@@ -30,6 +30,9 @@ dependencies:
   # connectivity check, to know when to flush the offline queue
   connectivity_plus: ^6.1.0
 
+  # open DigiLocker consent URL in the system browser
+  url_launcher: ^6.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

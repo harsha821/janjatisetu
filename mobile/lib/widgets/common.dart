@@ -13,7 +13,7 @@ class StatusChip extends StatelessWidget {
     final color = statusColor(status);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: color.withOpacity(0.15), borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20)),
       child: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 12)),
     );
   }
@@ -106,7 +106,7 @@ class OfflineBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      color: AppColors.accent.withOpacity(0.15),
+      color: AppColors.accent.withValues(alpha: 0.15),
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       child: Row(
         children: [

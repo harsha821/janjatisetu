@@ -64,7 +64,6 @@ def submit_application(db: Session, app: Application, user: User, profile: Stude
     transition(db, app, "SUBMITTED", actor_role="STUDENT", scheme_name=scheme.short_name)
     gateway = Gateway(db)
     push_to_portal(db, app, scheme, profile, gateway)
-    transition(db, app, "UNDER_VERIFICATION", note="Sent for verification", scheme_name=scheme.short_name)
 
     consents = consent_set(db, user.id)
     report = run_verification(_verification_profile(user, profile), gateway, consents)
@@ -72,6 +71,7 @@ def submit_application(db: Session, app: Application, user: User, profile: Stude
     profile.verification_confidence = report["confidence"]
     profile.verification_report = report
     profile.verified_at = utcnow()
+    app.verification_report = report
 
     for check in report["checks"]:
         if check["status"] in ("MISMATCH", "REVIEW"):
@@ -87,5 +87,12 @@ def submit_application(db: Session, app: Application, user: User, profile: Stude
     if verdict["flagged"]:
         open_case(db, "ANOMALY", "Application flagged for an unusual pattern", application_id=app.id, user_id=user.id,
                  severity="MEDIUM", details={"reasons": verdict["reasons"], "score": verdict["score"]})
+
+    if report["status"] == "VERIFIED" and report.get("all_satisfy") and not verdict["flagged"] and len(report.get("mismatches", [])) == 0:
+        transition(db, app, "SANCTIONED", actor_role="SYSTEM", note="Auto-sanctioned: Multi-source cross-check satisfied", scheme_name=scheme.short_name)
+        app.auto_verified = True
+    else:
+        transition(db, app, "UNDER_VERIFICATION", note="Queued for manual officer verification", scheme_name=scheme.short_name)
+        app.auto_verified = False
 
     mark_applied(db, profile.apaar_id)
