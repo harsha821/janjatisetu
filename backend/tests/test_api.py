@@ -78,10 +78,12 @@ def test_digilocker_needs_consent(client):
     assert client.get(f"{API}/wallet/digilocker", headers=lakhan).status_code == 403
 
 
-def test_submit_blocked_until_documents_attached(client, ravi):
+def test_submit_with_missing_documents_goes_to_manual_review(client, ravi):
     app_ = client.post(f"{API}/applications", json={"scheme_code": "TOP_CLASS"}, headers=ravi).json()
     r = client.post(f"{API}/applications/{app_['id']}/submit", headers=ravi)
-    assert r.status_code == 422 and "CASTE_CERT" in r.json()["detail"]["missing_documents"]
+    assert r.status_code == 200
+    assert r.json()["status"] == "UNDER_VERIFICATION"
+
 
 
 def test_full_journey_with_mismatch_routed_to_review(client, ravi, verifier, admin):
@@ -92,7 +94,8 @@ def test_full_journey_with_mismatch_routed_to_review(client, ravi, verifier, adm
         r = client.post(f"{API}/wallet/upload", data={"doc_type": t}, files={"file": (f"{t}.pdf", PDF, "application/pdf")}, headers=ravi)
         assert r.status_code == 201, r.text
     docs = client.get(f"{API}/wallet/documents", headers=ravi).json()
-    app_id = client.get(f"{API}/dashboard", headers=ravi).json()["applications"][0]["id"]
+    # Create a fresh application for Ravi to avoid conflicting with previous tests
+    app_id = client.post(f"{API}/applications", json={"scheme_code": "TOP_CLASS", "academic_year": "2025-26"}, headers=ravi).json()["id"]
     client.put(f"{API}/applications/{app_id}", json={"document_ids": [d["id"] for d in docs]}, headers=ravi)
 
     sub = client.post(f"{API}/applications/{app_id}/submit", headers=ravi)
@@ -270,3 +273,66 @@ def test_digilocker_status_endpoint(client, sunita):
     assert "connected" in body
     # In tests the demo student has no stored token
     assert body["connected"] is False
+
+
+def test_verification_checklist_is_scheme_aware(client, sunita, ravi):
+    """GET /applications/{id}/verification-checklist returns scheme-aware steps.
+
+    Covers three scenarios:
+    1. Sunita — PRE_MATRIC, CLASS_10: UDISE present, no AISHE, no 12th/uni marksheet.
+    2. Ravi   — POST_MATRIC, UG, no semester set (treated as sem 1): AISHE present,
+                no UDISE, no UNIVERSITY_MARKSHEET.
+    3. Standalone endpoint — POST_MATRIC + UG + semester=2: UNIVERSITY_MARKSHEET required.
+    """
+    # ── 1. Sunita: PRE_MATRIC CLASS_10 ──────────────────────────────────────
+    sunita_app_id = client.get(f"{API}/dashboard", headers=sunita).json()["applications"][0]["id"]
+    r = client.get(f"{API}/applications/{sunita_app_id}/verification-checklist", headers=sunita)
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["scheme_code"] == "PRE_MATRIC"
+
+    steps_by_id = {s["id"]: s for s in body["steps"]}
+
+    # UDISE must be applicable (school student)
+    assert steps_by_id["UDISE"]["applicable"] is True
+    assert steps_by_id["UDISE"]["status"] != "NOT_APPLICABLE"
+
+    # AISHE must NOT be applicable
+    assert steps_by_id["AISHE"]["applicable"] is False
+    assert steps_by_id["AISHE"]["status"] == "NOT_APPLICABLE"
+
+    # 12th marksheet and university marksheet must not apply
+    assert steps_by_id["TWELFTH_MARKSHEET"]["applicable"] is False
+    assert steps_by_id["UNIVERSITY_MARKSHEET"]["applicable"] is False
+
+    # 10th marksheet must apply (she is in Class 10)
+    assert steps_by_id["TENTH_MARKSHEET"]["applicable"] is True
+
+    # Structure sanity
+    assert body["total"] > 0
+    assert "verified" in body
+
+    # ── 2. Ravi: POST_MATRIC UG (no semester → treated as 1) ─────────────────
+    ravi_app_id = client.get(f"{API}/dashboard", headers=ravi).json()["applications"][0]["id"]
+    r2 = client.get(f"{API}/applications/{ravi_app_id}/verification-checklist", headers=ravi)
+    assert r2.status_code == 200, r2.text
+    body2 = r2.json()
+
+    steps2 = {s["id"]: s for s in body2["steps"]}
+    assert steps2["AISHE"]["applicable"] is True, "College student must have AISHE"
+    assert steps2["UDISE"]["applicable"] is False, "College student must not have UDISE"
+    # No semester set → treated as 1 → university marksheet not yet required
+    assert steps2["UNIVERSITY_MARKSHEET"]["applicable"] is False, "Sem 1 should not require uni marksheet"
+
+    # ── 3. Standalone endpoint: POST_MATRIC + UG + semester=2 ────────────────
+    r3 = client.get(
+        f"{API}/verification-requirements",
+        params={"scheme_code": "POST_MATRIC", "course_level": "UG", "semester": 2},
+    )
+    assert r3.status_code == 200, r3.text
+    body3 = r3.json()
+    steps3 = {s["id"]: s for s in body3["steps"]}
+    assert steps3["UNIVERSITY_MARKSHEET"]["applicable"] is True, "Sem 2 must require university marksheet"
+    assert steps3["UNIVERSITY_MARKSHEET"]["required"] is True
+    # No auth needed for the standalone endpoint — confirm it returns the right structure
+    assert "total" in body3 and "steps" in body3

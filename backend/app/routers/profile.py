@@ -44,6 +44,20 @@ def update_profile(body: ProfileIn, user: User = Depends(student_only), db: Sess
         p.bank_account_enc = encrypt_field(bank)
         p.bank_account_hash, p.bank_account_last4 = hash_identifier(bank), bank[-4:]
     audit(db, user, "UPDATE_PROFILE", "profile", user.id)
+    
+    # Sync profile changes to any DRAFT applications
+    from ..models import Application
+    from ..services.student import autofill
+    drafts = db.scalars(select(Application).where(Application.user_id == user.id, Application.status == "DRAFT")).all()
+    for draft in drafts:
+        filled = autofill(p, draft.scheme_code)
+        updated_form = dict(draft.form_data)
+        for k, v in filled.items():
+            if k != "_autofilled" and v is not None:
+                updated_form[k] = v
+        updated_form["_autofilled"] = sorted(list(set(updated_form.get("_autofilled", []) + filled.get("_autofilled", []))))
+        draft.form_data = updated_form
+
     db.commit()
     return profile_out(p)
 

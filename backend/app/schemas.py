@@ -3,7 +3,10 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
-DOC_TYPES = Literal["CASTE_CERT", "INCOME_CERT", "MARKSHEET", "BANK_PASSBOOK", "ADMISSION_LETTER", "NET_JRF_CERT"]
+DOC_TYPES = Literal[
+    "CASTE_CERT", "INCOME_CERT", "MARKSHEET", "BANK_PASSBOOK", "ADMISSION_LETTER", "NET_JRF_CERT",
+    "DOMICILE_CERT", "TENTH_MARKSHEET", "TWELFTH_MARKSHEET", "UNIVERSITY_MARKSHEET", "ENROLLMENT_CERT",
+]
 
 
 # ------------------------------------------------------------------- auth
@@ -40,6 +43,8 @@ class ProfileIn(BaseModel):
     ugc_nta_qualified: Optional[bool] = None
     ugc_nta_roll: Optional[str] = None
     foreign_admission: Optional[bool] = None
+    semester: Optional[int] = None
+    active_scholarships: Optional[list] = None
 
     # Raw plaintext, never persisted as-is: the profile router hashes/encrypts these
     # and they are stripped before any generic field-by-field update (see sync.py).

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:math';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -17,7 +16,7 @@ String _newId(String prefix) {
 
 /// True when the exception means "could not reach the server" (queue it),
 /// as opposed to [ApiException] which means "the server answered, and said no".
-bool _isNetworkFailure(Object e) => e is SocketException || e is http.ClientException || e is TimeoutException;
+bool _isNetworkFailure(Object e) => e.runtimeType.toString() == 'SocketException' || e is http.ClientException || e is TimeoutException;
 
 /// Central store for everything the student screens show: dashboard,
 /// profile, eligibility, wallet documents, notifications — plus the offline

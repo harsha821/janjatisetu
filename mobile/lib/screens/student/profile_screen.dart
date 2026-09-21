@@ -157,6 +157,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _aisheCode.text = p['institution_code'] ?? '';
       _collegeCourse.text = p['course_name'] ?? '';
       _collegeCgpa.text = p['last_exam_percentage']?.toString() ?? '';
+      if (p['semester'] != null) {
+        _collegeSemester.text = p['semester'].toString();
+      }
     }
 
     if (p['ugc_nta_qualified'] == true || (p['ugc_nta_roll'] as String?)?.isNotEmpty == true) {
@@ -191,6 +194,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (_apaar.text.trim().isNotEmpty) 'apaar_id': _apaar.text.trim(),
       if (_aadhaar.text.trim().isNotEmpty) 'aadhaar_number': _aadhaar.text.trim(),
       if (_bankAccount.text.trim().isNotEmpty) 'bank_account_number': _bankAccount.text.trim(),
+      if (!isSchool && _collegeSemester.text.trim().isNotEmpty)
+        'semester': int.tryParse(_collegeSemester.text.trim().replaceAll(RegExp(r'[^0-9]'), '')),
       if (_hasCompetitiveExam) ...{
         'ugc_nta_qualified': _examResult == 'Qualified',
         'ugc_nta_roll': _examAppNo.text.trim(),

@@ -14,6 +14,7 @@ from ..models import Application, Document, Scheme, StudentProfile, User, utcnow
 from . import anomaly
 from .cases import open_case
 from .coverage_gap import mark_applied
+from .doc_requirements import required_steps
 from .student import _profile_for_rules, consent_set, eligibility_for
 from .verification import run_verification
 from .workflow import transition
@@ -52,10 +53,10 @@ def submit_application(db: Session, app: Application, user: User, profile: Stude
     if scheme is None:
         raise SubmissionError(404, "Scheme not found")
 
+    steps = required_steps(app.scheme_code, profile.course_level, profile.semester, profile.category)
+    required_doc_types = {s["doc_type"] for s in steps if s["required"] and s["applicable"] and s["doc_type"]}
     attached = {d.doc_type for d in db.scalars(select(Document).where(Document.id.in_(app.document_ids or [])))}
-    missing = [dt for dt in scheme.documents if dt not in attached]
-    if missing:
-        raise SubmissionError(422, {"missing_documents": missing, "message": "Attach the required documents first"})
+    missing = [dt for dt in required_doc_types if dt not in attached]
 
     this_scheme = next((r for r in eligibility_for(db, profile) if r["scheme_code"] == app.scheme_code), None)
     if this_scheme and this_scheme["status"] == "NOT_ELIGIBLE":
@@ -88,8 +89,12 @@ def submit_application(db: Session, app: Application, user: User, profile: Stude
         open_case(db, "ANOMALY", "Application flagged for an unusual pattern", application_id=app.id, user_id=user.id,
                  severity="MEDIUM", details={"reasons": verdict["reasons"], "score": verdict["score"]})
 
-    if report["status"] == "VERIFIED" and report.get("all_satisfy") and not verdict["flagged"] and len(report.get("mismatches", [])) == 0:
-        transition(db, app, "SANCTIONED", actor_role="SYSTEM", note="Auto-sanctioned: Multi-source cross-check satisfied", scheme_name=scheme.short_name)
+    if missing:
+        open_case(db, "MISSING_DOCUMENTS", "Application submitted with missing required documents", application_id=app.id,
+                 user_id=user.id, severity="HIGH", details={"missing": missing})
+
+    if not missing and report["status"] == "VERIFIED" and report.get("all_satisfy") and not verdict["flagged"] and len(report.get("mismatches", [])) == 0:
+        transition(db, app, "VERIFIED", actor_role="SYSTEM", note="Auto-verified: Multi-source cross-check satisfied", scheme_name=scheme.short_name)
         app.auto_verified = True
     else:
         transition(db, app, "UNDER_VERIFICATION", note="Queued for manual officer verification", scheme_name=scheme.short_name)

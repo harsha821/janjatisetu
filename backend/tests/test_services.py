@@ -5,6 +5,7 @@ from pathlib import Path
 
 from app.integrations.gateway import SourceUnavailable
 from app.services import anomaly, assistant, eligibility as E, matching as M
+from app.services.doc_requirements import required_steps
 from app.services.lifecycle import build_timeline, can_transition
 from app.services.verification import run_verification
 
@@ -237,3 +238,46 @@ def test_reply_uses_students_own_data():
     r = assistant.reply("Any corrections pending?", "en", ctx)
     assert "Upload your passbook" in r["reply"]
     assert assistant.reply("मेरा आवेदन कहाँ है?", "en", ctx)["language"] == "hi"
+
+
+# -------------------------------------------------------- doc_requirements
+
+def _steps_by_id(scheme_code: str, course_level: str, semester: int | None = None) -> dict:
+    """Helper: return required_steps() indexed by step ID."""
+    return {s["id"]: s for s in required_steps(scheme_code, course_level, semester)}
+
+
+def test_pre_matric_class10_has_udise_and_tenth_but_no_aishe():
+    steps = _steps_by_id("PRE_MATRIC", "CLASS_10")
+    assert steps["UDISE"]["applicable"] is True, "UDISE must apply for PRE_MATRIC CLASS_10"
+    assert steps["TENTH_MARKSHEET"]["applicable"] is True, "10th marksheet required for Class 10"
+    assert steps["AISHE"]["applicable"] is False, "AISHE must NOT apply for a school student"
+    assert steps["TWELFTH_MARKSHEET"]["applicable"] is False, "12th marksheet must not apply"
+    assert steps["UNIVERSITY_MARKSHEET"]["applicable"] is False, "University marksheet must not apply"
+
+
+def test_pre_matric_class9_no_tenth_marksheet():
+    steps = _steps_by_id("PRE_MATRIC", "CLASS_9")
+    assert steps["TENTH_MARKSHEET"]["applicable"] is False, "Class 9 student has not yet sat Class 10 board"
+    assert steps["UDISE"]["applicable"] is True, "UDISE still required for Class 9"
+
+
+def test_post_matric_class11_has_udise_and_no_university_marksheet():
+    steps = _steps_by_id("POST_MATRIC", "CLASS_11")
+    assert steps["UDISE"]["applicable"] is True, "UDISE required for Class 11"
+    assert steps["AISHE"]["applicable"] is False, "AISHE not applicable for school level"
+    assert steps["UNIVERSITY_MARKSHEET"]["applicable"] is False
+
+
+def test_post_matric_ug_semester1_no_university_marksheet():
+    steps = _steps_by_id("POST_MATRIC", "UG", semester=1)
+    assert steps["AISHE"]["applicable"] is True, "AISHE required for college students"
+    assert steps["UDISE"]["applicable"] is False, "UDISE not applicable for college"
+    assert steps["UNIVERSITY_MARKSHEET"]["applicable"] is False, "Sem 1: university marksheet not yet available"
+    assert steps["TWELFTH_MARKSHEET"]["applicable"] is True, "12th marksheet required for UG entry"
+
+
+def test_post_matric_ug_semester2_university_marksheet_required():
+    steps = _steps_by_id("POST_MATRIC", "UG", semester=2)
+    assert steps["UNIVERSITY_MARKSHEET"]["applicable"] is True, "Sem 2+: university marksheet required"
+    assert steps["UNIVERSITY_MARKSHEET"]["required"] is True

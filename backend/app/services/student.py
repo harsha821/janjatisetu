@@ -72,6 +72,7 @@ def profile_out(profile: StudentProfile) -> dict:
         "ifsc": profile.ifsc, "annual_family_income": profile.annual_family_income,
         "ugc_nta_qualified": profile.ugc_nta_qualified, "ugc_nta_roll": profile.ugc_nta_roll,
         "foreign_admission": profile.foreign_admission, "active_scholarships": profile.active_scholarships or [],
+        "semester": profile.semester,
         "verification_status": profile.verification_status, "verification_confidence": profile.verification_confidence,
         "completeness": completeness(profile)["percent"],
         "updated_at": _iso(profile.updated_at),
@@ -136,7 +137,10 @@ def autofill(profile: StudentProfile, scheme_code: str) -> dict:
         "institution_name": profile.institution_name, "institution_code": profile.institution_code,
         "apaar_id": profile.apaar_id, "annual_family_income": profile.annual_family_income,
         "bank_account_last4": profile.bank_account_last4, "ifsc": profile.ifsc,
-        "last_exam_percentage": profile.last_exam_percentage,
+        "last_exam_percentage": profile.last_exam_percentage, "semester": profile.semester,
+        "ugc_nta_qualified": profile.ugc_nta_qualified, "ugc_nta_roll": profile.ugc_nta_roll,
+        "foreign_admission": profile.foreign_admission,
+        "institution_top_class_notified": profile.institution_top_class_notified,
     }
     form["_autofilled"] = sorted(k for k, v in form.items() if v not in (None, "") and k not in ("scheme_code",))
     return form

@@ -201,11 +201,32 @@ class ApiClient {
         if (documentIds != null) 'document_ids': documentIds,
       })) as Map<String, dynamic>;
 
+  Future<Map<String, dynamic>> autofillApplication(int id) async =>
+      (await post('/applications/$id/autofill', body: {})) as Map<String, dynamic>;
+
   Future<Map<String, dynamic>> submitApplication(int id) async => (await post('/applications/$id/submit')) as Map<String, dynamic>;
 
   Future<Map<String, dynamic>> resolveDeficiency(int appId, int defId, String note, {int? documentId}) async =>
       (await post('/applications/$appId/deficiencies/$defId/resolve',
           body: {'note': note, if (documentId != null) 'document_id': documentId})) as Map<String, dynamic>;
+
+  /// Returns the scheme-aware verification step list for an existing application,
+  /// with each step enriched with ``status``, ``document_id``, and ``source_check``.
+  Future<Map<String, dynamic>> getVerificationChecklist(int appId) async =>
+      (await get('/applications/$appId/verification-checklist')) as Map<String, dynamic>;
+
+  /// Standalone (no application required). Returns the raw verification step list
+  /// for a (scheme_code, course_level, semester) combination.
+  Future<Map<String, dynamic>> getVerificationRequirements({
+    required String schemeCode,
+    required String courseLevel,
+    int? semester,
+  }) async =>
+      (await get('/verification-requirements', query: {
+        'scheme_code': schemeCode,
+        'course_level': courseLevel,
+        if (semester != null) 'semester': semester,
+      })) as Map<String, dynamic>;
 
   // ------------------------------------------------------------- notify
   Future<List<dynamic>> notifications({bool unreadOnly = false}) async =>

@@ -56,6 +56,7 @@ class StudentProfile(Base):
     institution_top_class_notified: Mapped[bool] = mapped_column(default=False)
     last_exam_percentage: Mapped[Optional[float]]
     apaar_id: Mapped[Optional[str]] = mapped_column(String(12), index=True)
+    semester: Mapped[Optional[int]]  # 1-based; None = unknown; used by verification checklist
 
     aadhaar_hash: Mapped[Optional[str]] = mapped_column(String(64), index=True)  # never the raw number
     aadhaar_last4: Mapped[Optional[str]] = mapped_column(String(4))
